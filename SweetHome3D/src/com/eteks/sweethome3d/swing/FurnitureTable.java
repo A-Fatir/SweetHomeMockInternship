@@ -131,6 +131,7 @@ public class FurnitureTable extends JTable implements View, Printable {
   private int                    furnitureInformationRow;
   private Popup                  furnitureInformationPopup;
   private AWTEventListener       informationPopupRemovalListener;
+  private boolean                levelColumnPrinted;
 
   /**
    * Creates a table that displays furniture of <code>home</code>.
@@ -724,6 +725,21 @@ public class FurnitureTable extends JTable implements View, Printable {
   }
 
   /**
+   * Sets whether the level column should be added to the printed columns  
+   * when it's not displayed by this table. The columns displayed on screen aren't changed.
+   */
+  public void setLevelColumnPrinted(boolean levelColumnPrinted) {
+    this.levelColumnPrinted = levelColumnPrinted;
+  }
+  
+  /**
+   * Returns <code>true</code> if the level column is always printed.
+   */
+  public boolean isLevelColumnPrinted() {
+    return this.levelColumnPrinted;
+  }
+  
+  /**
    * Prints this component to make it fill <code>pageFormat</code> imageable size.
    */
   public int print(Graphics g, PageFormat pageFormat, int pageIndex) throws PrinterException {
@@ -750,8 +766,22 @@ public class FurnitureTable extends JTable implements View, Printable {
           return headerRendererLabel;
         }
       };
+    // Retrieve the columns to print
+    List<TableColumn> printedColumns = new ArrayList<TableColumn>();
+    boolean levelColumnDisplayed = false;
     for (int columnIndex = 0, n = columnModel.getColumnCount(); columnIndex < n; columnIndex++) {
-      final TableColumn tableColumn = columnModel.getColumn(columnIndex);
+      TableColumn tableColumn = columnModel.getColumn(columnIndex);
+      printedColumns.add(tableColumn);
+      levelColumnDisplayed |= tableColumn.getIdentifier() == HomePieceOfFurniture.SortableProperty.LEVEL;
+    }
+    if (this.levelColumnPrinted 
+        && !levelColumnDisplayed
+        && columnModel instanceof FurnitureTableColumnModel) {
+      // Print level column after the displayed ones without adding it to the table on screen
+      printedColumns.add(((FurnitureTableColumnModel)columnModel).getAvailableColumn(
+          HomePieceOfFurniture.SortableProperty.LEVEL));
+    }
+    for (final TableColumn tableColumn : printedColumns) {
       // Create a printable column from existing table column
       TableColumn printableColumn = new TableColumn();
       printableColumn.setIdentifier(tableColumn.getIdentifier());
@@ -1087,6 +1117,13 @@ public class FurnitureTable extends JTable implements View, Printable {
       }
     }
     
+    /**
+     * Returns the column matching the given <code>property</code>, whether it's displayed or not. 
+     */
+    public TableColumn getAvailableColumn(HomePieceOfFurniture.SortableProperty property) {
+      return this.availableColumns.get(property);
+    }
+
     /**
      * Updates displayed columns list from furniture visible properties. 
      */
